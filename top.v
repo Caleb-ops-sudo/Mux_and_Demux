@@ -1,94 +1,58 @@
+`timescale 1ns/1ps
 
-module mux(
+module test();
+    wire [15:0] led;
+    reg [15:0] sw;
+    reg btnl, btnu, btnd, btnr, btnc;
 
+    top uut(
+        .led(led),
+        .sw(sw),
+        .btnL(btnl),
+        .btnU(btnu),
+        .btnD(btnd),
+        .btnR(btnr),
+        .btnC(btnc)
+    );
 
-input [3:0] A, [3:0] B, [3:0] C, [3:0] D, 
-input [1:0] Sel,
-input Enable,
-output [3:0] Y
-
-);
-
-assign Y = Enable == 1 ? Sel == 'b00 ? A :
-           Sel == 'b01 ? B :
-           Sel == 'b10 ? C : D : 0 ;
-           
- 
-           
- endmodule          
-           
-           
-           
-           
-           
-
-module demux(
-    input [3:0] DataIn,
-    input [1:0] Sel,
+    reg [4:0] i;
     
-    input Enable, 
+    wire [1:0] mult_sel;
+    wire [1:0] demult_sel;
+    
+    wire [3:0] current_mult;
+    wire [3:0] current_demult;
+    
+    assign mult_sel = {btnu, btnl};
+    assign demult_sel = {btnr, btnd};
+    
+    assign current_mult = (sw >> (4 * mult_sel)) & 'hF;
+    assign current_demult = (led >> (4 * demult_sel)) & 'hF;
 
-    output [3:0] f1,
-    output [3:0] f2,
-    output [3:0] f3,
-    output [3:0] f4
-);
-
-assign f1 = Enable == 1 ? (Sel == 2'b00 ? DataIn : 0) : 0;
-assign f2 = Enable == 1 ? (Sel == 2'b01 ? DataIn : 0) : 0;
-assign f2 = Enable == 1 ? (Sel == 2'b10 ? DataIn : 0) : 0;
-assign f3 = Enable == 1 ? (Sel == 2'b11 ? DataIn : 0) : 0;
-
-
-endmodule
-
-
-
-
-
-
-module top(
-
-input btnU, btnD, btnR, btnC, btnL,
-input [15:0] sw,
-output [15:0] led
-);
-
-wire [3:0] carry;
-wire [1:0] mux_select;
-wire [1:0] demux_select;
-
-assign mux_select[0] = btnL;
-assign mux_select[1] = btnU;
-
-assign demux_select[0] = btnD; 
-assign demux_select[1] = btnR;
-
-assign Enable = ~btnC;
-
-
-mux topmux(
-
-.Enable(Enable),
-.Y(carry),
-.A(sw[3:0]),
-.B(sw[7:4]), 
-.C(sw[11:8]), 
-.D(sw[15:12]),
-.Sel(mux_slelect)
-); 
-
-demux topdemux(
-
-.Enable(Enable),
-.DataIn(carry),
-.Sel(demux_select),
-.f1(led[3:0]),
-.f2(led[7:4]), 
-.f3(led[11:8]), 
-.f4(led[15:12])
-
-);
-
-
+    initial begin
+        $dumpvars(0, test);
+        sw = 'b0110_1010_0101_1001;
+        btnl = 0;
+        btnu = 0;
+        btnd = 0;
+        btnr = 0;
+        btnc = 0;
+        #10;
+        btnc = 1;
+        for (i = 0; i < 16; i = i + 1) begin
+            #10;
+            btnl = i[0];
+            btnu = i[1];
+            btnd = i[2];
+            btnr = i[3];
+            
+            if (current_mult != current_demult) begin
+                // If your simulation stops here
+                // then your design fails the test!
+                $display("Failed test!");
+                $finish;
+            end
+        end
+        #10 $finish;
+    end
 endmodule
